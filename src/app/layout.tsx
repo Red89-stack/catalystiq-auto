@@ -1,5 +1,5 @@
 import "./globals.css";
-import { ReactNode } from "react";
+//import { ReactNode } from "react";
 import NavBar from "@/components/ui/NavBar";
 
 export const metadata = {
