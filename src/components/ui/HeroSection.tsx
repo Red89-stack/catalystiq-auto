@@ -1,10 +1,7 @@
 // src/components/ui/HeroSection.tsx
 
-<<<<<<< HEAD
-=======
 "use client";
 
->>>>>>> 6ea3d6b (Restore navbar, fix HeroSection navigation, update services page layout)
 import React from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";

@@ -15,12 +15,9 @@ const services = [
   },
   {
     title: "AI Forecasting",
-<<<<<<< HEAD
     description: 
       "Use AI analytics to forecast operation of your business",
-=======
     description: "Use AI analytics to forecast operation of your business",
->>>>>>> 6ea3d6b (Restore navbar, fix HeroSection navigation, update services page layout)
   },
   {
     title: "IoT Integration",
@@ -34,31 +31,21 @@ const services = [
   },
   {
     title: "CyberSec Consultation",
-<<<<<<< HEAD
-    description:
-      "Protect Client Data, Secure IoT networks, Audit Network Compliance",
-=======
-    description: "Protect Client Data, Secure IoT networks, Audit Network Compliance",
->>>>>>> 6ea3d6b (Restore navbar, fix HeroSection navigation, update services page layout)
+    description:"Protect Client Data, Secure IoT networks, Audit Network Compliance",
   },
   {
     title: "Inventory and Equipment Tracking Systems",
-    description:
-      "RFID or barcode systems to track tools, truck stock, and parts",
+    description:"RFID or barcode systems to track tools, truck stock, and parts",
   },
   {
     title: "Cloud Platforms",
-<<<<<<< HEAD
-    description:
-      "Cloud Dashboards for oversight and monitoring HVAC systems remotely",
-=======
+    description:"Cloud Dashboards for oversight and monitoring HVAC systems remotely",
+
     description: "Cloud Dashboards for oversight and monitoring HVAC systems remotely",
->>>>>>> 6ea3d6b (Restore navbar, fix HeroSection navigation, update services page layout)
   },
   {
     title: "3D Scanning and Modeling",
-    description:
-      "Use 3D tech to scan mechanical rooms, equipment placement for quoting and planning.",
+    description:"Use 3D tech to scan mechanical rooms, equipment placement for quoting and planning.",
   },
 ];
 
@@ -71,12 +58,9 @@ export default function ServicesPage() {
           {services.map((service) => (
             <div
               key={service.title}
-<<<<<<< HEAD
               className="p-6 bg-zinc-800 rounded-lg shadow-lg hover:bg-zinc-700 transition cursor-pointer"
               onClick={() => window.scrollTo(0, 0)} // placeholder for future detail
-=======
               className="p-6 bg-zinc-800 rounded-lg shadow-lg hover:bg-zinc-700 transition"
->>>>>>> 6ea3d6b (Restore navbar, fix HeroSection navigation, update services page layout)
             >
               <h2 className="text-2xl font-semibold mb-2">
                 {service.title}
