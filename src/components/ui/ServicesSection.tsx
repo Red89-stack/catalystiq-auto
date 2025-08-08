@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 // src/app/services/page.tsx
 import React from "react";
 import { Metadata } from "next";
@@ -46,9 +46,8 @@ const services = [
   },
   {
     title: "3D Scanning and Modeling",
-    description:
-      "Use 3D tech to scan mechanical rooms, equipment placement for quoting and planning.",
-=======
+    description:"Use 3D tech to scan mechanical rooms, equipment placement for quoting and planning.",
+      
 import Link from "next/link";
 
 type Service = {
@@ -72,13 +71,11 @@ const services: Service[] = [
     name: "Streamline inventory and service tracking",
     slug: "streamline",
     description: "Create streamlined databasing and tracking using AI",
->>>>>>> 5061bf4 (WIP: local changes before rebase)
   },
 ];
 
 export default function ServicesPage() {
   return (
-<<<<<<< HEAD
     <main className="min-h-screen bg-zinc-900 text-white py-16 px-6">
       <div className="max-w-5xl mx-auto">
         <h1 className="text-4xl font-bold text-center mb-12">Our Services</h1>
@@ -96,7 +93,6 @@ export default function ServicesPage() {
             </div>
           ))}
         </div>
-=======
     <section className="p-8 bg-gray-900 text-white">
       <h2 className="text-3xl font-bold mb-6">Our Services</h2>
       <div className="grid md:grid-cols-2 gap-6">
@@ -108,7 +104,6 @@ export default function ServicesPage() {
             </div>
           </Link>
         ))}
->>>>>>> 5061bf4 (WIP: local changes before rebase)
       </div>
     </main>
   );
