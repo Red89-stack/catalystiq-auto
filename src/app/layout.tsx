@@ -1,22 +1,16 @@
+// src/app/layout.tsx
 import "./globals.css";
-//import { ReactNode } from "react";
-import NavBar from "@/components/ui/NavBar";
 
 export const metadata = {
   title: "CatalystIQ",
-  description: "Integrations",
+  description: "Bringing Technology to Industry",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-zinc-900 text-white">
-        <NavBar />
-        {/* Add top padding equivalent to nav height (e.g. 64px) */}
-        <div className="pt-20">
-          {children}
-        </div>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
+
