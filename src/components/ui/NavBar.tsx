@@ -8,7 +8,7 @@ export default function NavBar() {
         <div className="flex gap-6 text-sm">
           <Link href="/">Home</Link>
           <Link href="/services">Services</Link>
-          <Link href="/book">Book</Link>
+          <Link href="/booking">Booking</Link>
         </div>
       </div>
     </nav>

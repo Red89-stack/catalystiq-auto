@@ -1,5 +1,4 @@
 import "./globals.css";
-import "react-calendar/dist/Calendar.css";
 import type { ReactNode } from "react";
 import NavBar from "../components/ui/NavBar";
 

@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: { ignoreDuringBuilds: true },
-  typescript: { ignoreBuildErrors: true },
+  async redirects() {
+    return [
+      { source: '/book', destination: '/booking', permanent: true },
+    ];
+  },
 };
 module.exports = nextConfig;
+

@@ -19,6 +19,7 @@
     "incremental": true,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] },
     "plugins": [
       {
         "name": "next"
