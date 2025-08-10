@@ -1,30 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import BookingDatePicker from "@/components/ui/BookingDatePicker";
+import BookingDatePicker from "@/components/ui/calendar.tsx";
 
 const TIMES = ["09:00","10:00","11:00","13:00","15:00","17:00"];
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-export async function OPTIONS() {
-  return new Response(null, { status: 204, headers: cors });
-}
-
-export async function POST(req: Request) {
-  const body = await req.json();
-  await fetch("/api/booking", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ date, time }),
-});
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200,
-    headers: { "Content-Type": "application/json", ...cors },
-  });
-}
 
 export default function BookingPage() {
   const [date, setDate] = useState<Date | undefined>();
