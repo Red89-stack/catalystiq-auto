@@ -1,3 +1,4 @@
+// src/app/booking/page.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -62,5 +63,6 @@ export default function BookingPage() {
     </section>
   );
 }
+
 
 

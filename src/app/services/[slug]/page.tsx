@@ -1,34 +1,27 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { services } from "../data";
+import Link from "next/link";
+import { services } from "./data";
 
-type Props = { params: { slug: string } };
+export const metadata = {
+  title: "Services — CatalystIQ",
+};
 
-export function generateStaticParams() {
-  return services.map((s) => ({ slug: s.slug }));
-}
-
-export function generateMetadata({ params }: Props): Metadata {
-  const svc = services.find((s) => s.slug === params.slug);
-  return { title: svc ? `${svc.title} — CatalystIQ` : "Service — CatalystIQ" };
-}
-
-export default function ServiceDetailPage({ params }: Props) {
-  const svc = services.find((s) => s.slug === params.slug);
-  if (!svc) return notFound();
-
+export default function ServicesPage() {
   return (
     <div className="container mx-auto px-4 py-12">
-      <h1 className="text-4xl font-bold mb-4">{svc.title}</h1>
-      <p className="text-zinc-300 max-w-2xl">{svc.description}</p>
+      <h1 className="text-4xl font-bold mb-8">Services</h1>
 
-      <div className="mt-10">
-        <a
-          href={`/book?service=${encodeURIComponent(svc.slug)}`}
-          className="px-5 py-3 rounded-lg bg-white text-black font-semibold hover:opacity-90 transition"
-        >
-          Inquire / Book
-        </a>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {services.map((service) => (
+          <Link
+            key={service.slug}
+            href={`/services/${service.slug}`}
+            className="p-6 bg-zinc-800 rounded-lg shadow-lg hover:bg-zinc-700 transition block"
+          >
+            <h2 className="text-2xl font-semibold mb-2">{service.title}</h2>
+            <p className="text-zinc-300">{service.description}</p>
+            <span className="inline-block mt-4 underline">Learn more →</span>
+          </Link>
+        ))}
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ export default function HeroSection() {
   return (
     <section className="py-20 text-center">
       <h1 className="text-4xl md:text-6xl font-bold mb-6">
-        Tech + HVAC, Integrated.
+        Automation Integrated.
       </h1>
       <p className="text-zinc-300 max-w-2xl mx-auto mb-10">
         IoT monitoring, AI forecasting, cybersecurity audits, and cloud dashboards—
