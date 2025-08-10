@@ -15,7 +15,11 @@ export async function OPTIONS() {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  // ...do work...
+  await fetch("/api/booking", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ date, time }),
+});
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,
     headers: { "Content-Type": "application/json", ...cors },
