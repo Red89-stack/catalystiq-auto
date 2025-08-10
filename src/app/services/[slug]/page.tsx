@@ -3,12 +3,14 @@ import { notFound } from "next/navigation";
 import { services } from "@/data/services"; // <-- keep this
 // ❌ remove any "export const services = ..." in this file
 
+//type Props = { params: { slug: string } };
+
 export function generateStaticParams() {
   return services.map((s) => ({ slug: s.slug }));
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }) {
-  const svc = services.find((s) => s.slug === params.slug);
+export function generateMetadata({ params: { slug: Metadata } }) {
+  const svc = services.find((s) => ({ slug: s.slug }));
   return {
     title: svc ? `${svc.title} — Services` : "Service",
     description: svc?.tagline ?? "Service details",
