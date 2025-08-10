@@ -7,6 +7,12 @@ export type Service = {
 
 export const services: Service[] = [
   {
+    slug: "chatbot-integration",
+    title: "Chatbot Integration",
+    tagline: "Automate lead capture, scheduling, and support.",
+    description:"We design and integrate AI chatbots that match your brand and plug into your CRM, booking, and knowledge base. Includes conversation flows, lead capture, analytics, and secure data handling.",
+  },
+  {
     slug: "ai-forecasting",
     title: "AI Forecasting",
     tagline: "Predict demand, staffing, and maintenance windows.",

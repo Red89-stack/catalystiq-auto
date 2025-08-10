@@ -1,6 +1,7 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
-import { services } from "@/data/services";
+import { notFound } from "next/navigation";
+import { services } from "@/data/services"; // <-- keep this
+// ❌ remove any "export const services = ..." in this file
 
 export function generateStaticParams() {
   return services.map((s) => ({ slug: s.slug }));
@@ -14,11 +15,7 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
   };
 }
 
-export default function ServiceDetail({
-  params,
-}: {
-  params: { slug: string };
-}) {
+export default function ServiceDetail({ params }: { params: { slug: string } }) {
   const svc = services.find((s) => s.slug === params.slug);
   if (!svc) return notFound();
 
@@ -34,26 +31,6 @@ export default function ServiceDetail({
       </header>
 
       <p className="text-zinc-200 leading-relaxed">{svc.description}</p>
-
-      {/* Example sections – customize per service */}
-      <section className="space-y-2">
-        <h2 className="text-xl font-medium">What you get</h2>
-        <ul className="list-disc list-inside text-zinc-300 space-y-1">
-          <li>Discovery workshop & requirements</li>
-          <li>Architecture & implementation plan</li>
-          <li>Deploy, train, and handoff</li>
-          <li>Optional managed support</li>
-        </ul>
-      </section>
-
-      <div className="pt-2">
-        <Link
-          href="/#book"
-          className="inline-block rounded-md bg-white/10 px-4 py-2 hover:bg-white/20"
-        >
-          Inquire for pricing / Book a call
-        </Link>
-      </div>
     </article>
   );
 }
