@@ -1,24 +1,32 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { services } from "@/data/services"; // <-- keep this
-// ❌ remove any "export const services = ..." in this file
+import type { Metadata } from "next";
+import { services } from "@/data/services";
 
-//type Props = { params: { slug: string } };
-
+// Pre-render all slugs
 export function generateStaticParams() {
   return services.map((s) => ({ slug: s.slug }));
 }
 
-export function generateMetadata({ params: { slug: Metadata } }) {
-  const svc = services.find((s) => ({ slug: s.slug }));
+// Metadata (note Promise in params)
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params;
+  const svc = services.find((s) => s.slug === slug);
+  if (!svc) return { title: "Service" };
   return {
-    title: svc ? `${svc.title} — Services` : "Service",
-    description: svc?.tagline ?? "Service details",
+    title: `${svc.title} — Services`,
+    description: svc.tagline,
   };
 }
 
-export default function ServiceDetail({ params }: { params: { slug: string } }) {
-  const svc = services.find((s) => s.slug === params.slug);
+// Page (note Promise in params)
+export default async function ServiceDetail(
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const { slug } = await params;
+  const svc = services.find((s) => s.slug === slug);
   if (!svc) return notFound();
 
   return (
@@ -36,4 +44,5 @@ export default function ServiceDetail({ params }: { params: { slug: string } }) 
     </article>
   );
 }
+
 
