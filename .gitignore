@@ -31,3 +31,5 @@ pnpm-debug.log*
 /generated/prisma
 
 /generated/prisma
+
+/generated/prisma
