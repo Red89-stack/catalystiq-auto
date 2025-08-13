@@ -5,21 +5,12 @@ import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 
 // Extend the default session user type to include 'id'
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string
-      name?: string | null
-      email?: string | null
-      image?: string | null
-    }
-  }
-}
+// (TypeScript-specific type augmentation removed for JavaScript compatibility)
 
 const prisma = new PrismaClient()
 
 const handler = NextAuth({
-  adapter: PrismaAdapter(prisma) as any,
+  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -76,7 +67,7 @@ const handler = NextAuth({
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id as string
+        session.user.id = token.id
       }
       return session
     }
