@@ -9,7 +9,9 @@ import bcrypt from "bcryptjs"
 // Extend the default session user type to include 'id'
 // (TypeScript-specific type augmentation removed for JavaScript compatibility)
 
-const prisma = new PrismaClient()
+const globalForPrisma = globalThis
+globalForPrisma.prisma = globalForPrisma.prisma || new PrismaClient()
+const prisma = globalForPrisma.prisma
 
 const handler = NextAuth({
   adapter: PrismaAdapter(prisma),
