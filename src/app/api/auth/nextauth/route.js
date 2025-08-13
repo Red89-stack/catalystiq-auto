@@ -2,13 +2,17 @@ import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import { PrismaClient } from "@prisma/client"
+import { withAccelerate } from "prisma/extension-accelerate";
 import bcrypt from "bcryptjs"
 
 // ...existing code...
 
 // Extend the default session user type to include 'id'
 // (TypeScript-specific type augmentation removed for JavaScript compatibility)
-
+if (process.env.NODE_ENV === "production") {
+  // Enable Prisma Accelerate in production
+  PrismaClient.prototype.$extends(withAccelerate());
+}
 const globalForPrisma = globalThis
 globalForPrisma.prisma = globalForPrisma.prisma || new PrismaClient()
 const prisma = globalForPrisma.prisma
