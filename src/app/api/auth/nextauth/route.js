@@ -1,8 +1,10 @@
 import NextAuth from "next-auth"
-import CredentialsProvider from " /workspaces/catalystiq-auto / node_modules / @next - auth / prisma - adapter / dist / index"
+import CredentialsProvider from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
+
+// ...existing code...
 
 // Extend the default session user type to include 'id'
 // (TypeScript-specific type augmentation removed for JavaScript compatibility)
