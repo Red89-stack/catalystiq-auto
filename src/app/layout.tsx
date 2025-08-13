@@ -2,7 +2,7 @@ import "./globals.css";
 import type { ReactNode } from "react";
 import NavBar from "../components/ui/NavBar";
 import Script from "next/script";
-// import { Providers } from "../auth/nextauth/providers"
+// import { Credentials } from "../auth/nextauth/providers"
 
 export const metadata = {
   title: "CatalystIQ",
