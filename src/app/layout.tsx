@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import NavBar from "../components/ui/NavBar";
 import Script from "next/script";
 
+
 export const metadata = {
   title: "CatalystIQ",
   description: "Integrations",
