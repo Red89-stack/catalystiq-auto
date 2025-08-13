@@ -2,7 +2,7 @@ import "./globals.css";
 import type { ReactNode } from "react";
 import NavBar from "../components/ui/NavBar";
 import Script from "next/script";
-import { Providers } from "./providers"
+// import { Providers } from "../auth/nextauth/providers"
 
 export const metadata = {
   title: "CatalystIQ",
@@ -29,9 +29,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* Header */}
         <NavBar />
 
-        <Providers>
+        {/* <Providers>
           {children}
-        </Providers>
+        </Providers> */}
 
         {/* Page content */}
         <main className="pt-16">{/* add top padding if your NavBar is fixed */}{children}</main>
