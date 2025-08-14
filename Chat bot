@@ -1,0 +1,863 @@
+Comprehensive Business Chatbot Solution
+# White-label customizable system for small businesses
+
+import os
+import json
+import sqlite3
+import datetime
+import logging
+from typing import Dict, List, Optional, Any
+import requests
+import pandas as pd
+from abc import ABC, abstractmethod
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('business_chatbot.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Configuration class for white-label customization
+class BusinessConfig:
+    def __init__(self, config_file='config.json'):
+        self.config_file = config_file
+        self.config = self._load_config()
+    
+    def _load_config(self):
+        if os.path.exists(self.config_file):
+            try:
+                with open(self.config_file, 'r') as f:
+                    return json.load(f)
+            except json.JSONDecodeError:
+                logger.error(f"Error loading config file. Creating default.")
+                return self._create_default_config()
+        else:
+            return self._create_default_config()
+    
+    def _create_default_config(self):
+        default_config = {
+            "business_name": "Business Name",
+            "business_type": "general",  # Options: hvac, restaurant, retail, service, etc.
+            "contact_info": {
+                "email": "contact@business.com",
+                "phone": "(555) 123-4567",
+                "address": "123 Business St, City, State"
+            },
+            "social_media": {
+                "facebook_page_id": "",
+                "facebook_access_token": "",
+                "instagram_handle": "",
+                "twitter_handle": ""
+            },
+            "seo_keywords": ["business", "service", "product"],
+            "ad_platforms": {
+                "google_ads": {
+                    "enabled": False,
+                    "api_key": "",
+                    "budget": 100.0
+                },
+                "facebook_ads": {
+                    "enabled": False,
+                    "api_key": "",
+                    "budget": 100.0
+                }
+            },
+            "inventory_fields": {
+                "general": ["product_id", "name", "quantity", "price", "supplier"],
+                "hvac": ["equipment_id", "type", "brand", "model", "serial_number", "installation_date", "warranty_expiry", "last_service"]
+            }
+        }
+        
+        with open(self.config_file, 'w') as f:
+            json.dump(default_config, f, indent=4)
+        
+        return default_config
+    
+    def save_config(self):
+        with open(self.config_file, 'w') as f:
+            json.dump(self.config, f, indent=4)
+    
+    def update_config(self, key, value):
+        keys = key.split('.')
+        config = self.config
+        for k in keys[:-1]:
+            config = config.setdefault(k, {})
+        config[keys[-1]] = value
+        self.save_config()
+
+# Database Manager
+class DatabaseManager:
+    def __init__(self, db_path='business_data.db'):
+        self.db_path = db_path
+        self.conn = sqlite3.connect(db_path)
+        self.cursor = self.conn.cursor()
+        self._initialize_tables()
+    
+    def _initialize_tables(self):
+        # Clients table
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS clients (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT,
+            phone TEXT,
+            address TEXT,
+            notes TEXT,
+            date_added TEXT,
+            last_contact TEXT,
+            source TEXT
+        )
+        ''')
+        
+        # Leads table
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS leads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER,
+            status TEXT,
+            value REAL,
+            date_created TEXT,
+            date_closed TEXT,
+            notes TEXT,
+            FOREIGN KEY (client_id) REFERENCES clients (id)
+        )
+        ''')
+        
+        # SEO Analytics table
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS seo_analytics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            keyword TEXT,
+            search_volume INTEGER,
+            ranking INTEGER,
+            competition_score REAL,
+            date_analyzed TEXT
+        )
+        ''')
+        
+        # Ads Performance table
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ads_performance (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            platform TEXT,
+            campaign_id TEXT,
+            impressions INTEGER,
+            clicks INTEGER,
+            conversions INTEGER,
+            cost REAL,
+            revenue REAL,
+            date TEXT
+        )
+        ''')
+        
+        # Inventory table
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS inventory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_id TEXT,
+            name TEXT,
+            quantity INTEGER,
+            price REAL,
+            category TEXT,
+            supplier TEXT,
+            last_updated TEXT,
+            custom_fields TEXT  # JSON string for business-specific fields
+        )
+        ''')
+        
+        # Follow-ups table
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS follow_ups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER,
+            scheduled_date TEXT,
+            completed INTEGER DEFAULT 0,
+            notes TEXT,
+            FOREIGN KEY (client_id) REFERENCES clients (id)
+        )
+        ''')
+        
+        self.conn.commit()
+    
+    def add_client(self, name, email=None, phone=None, address=None, notes=None, source=None):
+        date_added = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.cursor.execute('''
+        INSERT INTO clients (name, email, phone, address, notes, date_added, last_contact, source)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (name, email, phone, address, notes, date_added, date_added, source))
+        self.conn.commit()
+        return self.cursor.lastrowid
+    
+    def get_client(self, client_id):
+        self.cursor.execute('SELECT * FROM clients WHERE id = ?', (client_id,))
+        return self.cursor.fetchone()
+    
+    def update_client(self, client_id, **kwargs):
+        fields = ', '.join([f"{key} = ?" for key in kwargs.keys()])
+        values = list(kwargs.values())
+        values.append(client_id)
+        self.cursor.execute(f'UPDATE clients SET {fields} WHERE id = ?', values)
+        self.conn.commit()
+    
+    def add_lead(self, client_id, status, value=None, notes=None):
+        date_created = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.cursor.execute('''
+        INSERT INTO leads (client_id, status, value, date_created, notes)
+        VALUES (?, ?, ?, ?, ?)
+        ''', (client_id, status, value, date_created, notes))
+        self.conn.commit()
+        return self.cursor.lastrowid
+    
+    def get_leads(self, client_id=None, status=None):
+        if client_id and status:
+            self.cursor.execute('SELECT * FROM leads WHERE client_id = ? AND status = ?', (client_id, status))
+        elif client_id:
+            self.cursor.execute('SELECT * FROM leads WHERE client_id = ?', (client_id,))
+        elif status:
+            self.cursor.execute('SELECT * FROM leads WHERE status = ?', (status,))
+        else:
+            self.cursor.execute('SELECT * FROM leads')
+        return self.cursor.fetchall()
+    
+    def add_seo_data(self, keyword, search_volume, ranking, competition_score):
+        date_analyzed = datetime.datetime.now().strftime('%Y-%m-%d')
+        self.cursor.execute('''
+        INSERT INTO seo_analytics (keyword, search_volume, ranking, competition_score, date_analyzed)
+        VALUES (?, ?, ?, ?, ?)
+        ''', (keyword, search_volume, ranking, competition_score, date_analyzed))
+        self.conn.commit()
+    
+    def get_seo_data(self, keyword=None):
+        if keyword:
+            self.cursor.execute('SELECT * FROM seo_analytics WHERE keyword = ? ORDER BY date_analyzed DESC', (keyword,))
+        else:
+            self.cursor.execute('SELECT * FROM seo_analytics ORDER BY date_analyzed DESC')
+        return self.cursor.fetchall()
+    
+    def add_ads_performance(self, platform, campaign_id, impressions, clicks, conversions, cost, revenue):
+        date = datetime.datetime.now().strftime('%Y-%m-%d')
+        self.cursor.execute('''
+        INSERT INTO ads_performance (platform, campaign_id, impressions, clicks, conversions, cost, revenue, date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (platform, campaign_id, impressions, clicks, conversions, cost, revenue, date))
+        self.conn.commit()
+    
+    def get_ads_performance(self, platform=None, campaign_id=None, date_range=None):
+        query = 'SELECT * FROM ads_performance WHERE 1=1'
+        params = []
+        
+        if platform:
+            query += ' AND platform = ?'
+            params.append(platform)
+        
+        if campaign_id:
+            query += ' AND campaign_id = ?'
+            params.append(campaign_id)
+        
+        if date_range:
+            query += ' AND date BETWEEN ? AND ?'
+            params.extend(date_range)
+        
+        query += ' ORDER BY date DESC'
+        self.cursor.execute(query, params)
+        return self.cursor.fetchall()
+    
+    def add_inventory_item(self, item_id, name, quantity, price, category, supplier, custom_fields=None):
+        last_updated = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        custom_fields_json = json.dumps(custom_fields) if custom_fields else None
+        
+        self.cursor.execute('''
+        INSERT INTO inventory (item_id, name, quantity, price, category, supplier, last_updated, custom_fields)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (item_id, name, quantity, price, category, supplier, last_updated, custom_fields_json))
+        self.conn.commit()
+        return self.cursor.lastrowid
+    
+    def update_inventory(self, item_id, quantity=None, price=None, custom_fields=None):
+        updates = []
+        params = []
+        
+        if quantity is not None:
+            updates.append("quantity = ?")
+            params.append(quantity)
+        
+        if price is not None:
+            updates.append("price = ?")
+            params.append(price)
+        
+        if custom_fields is not None:
+            updates.append("custom_fields = ?")
+            params.append(json.dumps(custom_fields))
+        
+        if updates:
+            updates.append("last_updated = ?")
+            params.append(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            
+            params.append(item_id)
+            query = f'UPDATE inventory SET {", ".join(updates)} WHERE item_id = ?'
+            self.cursor.execute(query, params)
+            self.conn.commit()
+    
+    def get_inventory(self, category=None, low_stock=False):
+        query = 'SELECT * FROM inventory WHERE 1=1'
+        params = []
+        
+        if category:
+            query += ' AND category = ?'
+            params.append(category)
+        
+        if low_stock:
+            query += ' AND quantity < 10'  # Threshold for low stock
+            
+        self.cursor.execute(query, params)
+        return self.cursor.fetchall()
+    
+    def schedule_follow_up(self, client_id, scheduled_date, notes=None):
+        self.cursor.execute('''
+        INSERT INTO follow_ups (client_id, scheduled_date, notes)
+        VALUES (?, ?, ?)
+        ''', (client_id, scheduled_date, notes))
+        self.conn.commit()
+        return self.cursor.lastrowid
+    
+    def get_pending_follow_ups(self):
+        today = datetime.datetime.now().strftime('%Y-%m-%d')
+        self.cursor.execute('''
+        SELECT f.*, c.name, c.email, c.phone
+        FROM follow_ups f
+        JOIN clients c ON f.client_id = c.id
+        WHERE f.completed = 0 AND f.scheduled_date <= ?
+        ORDER BY f.scheduled_date
+        ''', (today,))
+        return self.cursor.fetchall()
+    
+    def complete_follow_up(self, follow_up_id):
+        self.cursor.execute('UPDATE follow_ups SET completed = 1 WHERE id = ?', (follow_up_id,))
+        self.conn.commit()
+    
+    def close(self):
+        self.conn.close()
+
+# Business Modules
+class BaseBusinessModule(ABC):
+    def __init__(self, config, db_manager):
+        self.config = config
+        self.db_manager = db_manager
+    
+    @abstractmethod
+    def process_message(self, message, context=None):
+        pass
+
+class SEOModule(BaseBusinessModule):
+    def process_message(self, message, context=None):
+        # Check for SEO-related keywords in message
+        seo_keywords = ['seo', 'search engine', 'ranking', 'keyword', 'traffic']
+        if any(k in message.lower() for k in seo_keywords):
+            # Mock SEO data - in real implementation, this would call SEO APIs
+            return "I can help with SEO analytics. Would you like to see keyword performance, ranking reports, or competition analysis?"
+        return None
+    
+    def analyze_keyword(self, keyword):
+        # Mock implementation - in real app, this would call Google Keyword Planner or similar API
+        # Return random data for demonstration
+        import random
+        search_volume = random.randint(100, 10000)
+        ranking = random.randint(1, 100)
+        competition_score = random.uniform(0.1, 1.0)
+        
+        self.db_manager.add_seo_data(keyword, search_volume, ranking, competition_score)
+        return {
+            'keyword': keyword,
+            'search_volume': search_volume,
+            'ranking': ranking,
+            'competition_score': competition_score
+        }
+    
+    def get_keyword_trends(self, keyword):
+        # Get historical data for a keyword
+        data = self.db_manager.get_seo_data(keyword)
+        if not data:
+            return f"No historical data available for {keyword}. Would you like me to analyze it?"
+        
+        # Format data for display
+        trends = "\n".join([
+            f"Date: {item[5]}, Ranking: {item[3]}, Search Volume: {item[2]}, Competition: {item[4]:.2f}"
+            for item in data[:5]  # Show last 5 entries
+        ])
+        return f"Keyword trends for '{keyword}':\n{trends}"
+
+class LeadGenerationModule(BaseBusinessModule):
+    def process_message(self, message, context=None):
+        lead_keywords = ['lead', 'prospect', 'customer', 'client', 'interested']
+        if any(k in message.lower() for k in lead_keywords):
+            return "I can help with lead generation. Would you like to connect to Facebook leads, add a new lead manually, or view existing leads?"
+        return None
+    
+    def fetch_facebook_leads(self):
+        # Mock implementation - in real app, this would call Facebook Graph API
+        fb_config = self.config.config.get('social_media', {})
+        if not fb_config.get('facebook_page_id') or not fb_config.get('facebook_access_token'):
+            return "Facebook API not configured. Please add your Facebook Page ID and Access Token in the configuration."
+        
+        # Simulate fetching leads
+        mock_leads = [
+            {'name': 'John Doe', 'email': 'john@example.com', 'phone': '(555) 123-4567', 'address': '123 Main St'},
+            {'name': 'Jane Smith', 'email': 'jane@example.com', 'phone': '(555) 987-6543', 'address': '456 Oak Ave'}
+        ]
+        
+        clients_added = []
+        for lead in mock_leads:
+            client_id = self.db_manager.add_client(
+                name=lead['name'],
+                email=lead['email'],
+                phone=lead['phone'],
+                address=lead['address'],
+                source='Facebook'
+            )
+            self.db_manager.add_lead(client_id, status='New')
+            clients_added.append(lead['name'])
+        
+        return f"Added {len(clients_added)} new leads from Facebook: {', '.join(clients_added)}"
+    
+    def add_lead_manually(self, name, email=None, phone=None, address=None, notes=None):
+        client_id = self.db_manager.add_client(
+            name=name,
+            email=email,
+            phone=phone,
+            address=address,
+            notes=notes,
+            source='Manual'
+        )
+        self.db_manager.add_lead(client_id, status='New')
+        return f"Added new lead: {name}"
+
+class ClientDataModule(BaseBusinessModule):
+    def process_message(self, message, context=None):
+        data_keywords = ['client', 'customer', 'data', 'information', 'contact']
+        collect_keywords = ['add', 'save', 'store', 'collect', 'update']
+        
+        if any(k in message.lower() for k in data_keywords):
+            if any(k in message.lower() for k in collect_keywords):
+                return "I can collect client information. Please provide the name, email, phone, and address of the client."
+            else:
+                return "I can help with client data. Would you like to view client information, update existing data, or search for a specific client?"
+        return None
+    
+    def store_client_info(self, name, email=None, phone=None, address=None, notes=None, source=None):
+        client_id = self.db_manager.add_client(
+            name=name,
+            email=email,
+            phone=phone,
+            address=address,
+            notes=notes,
+            source=source or 'Chatbot'
+        )
+        return f"Client information stored successfully. Client ID: {client_id}"
+    
+    def search_client(self, search_term):
+        # Search by name, email, or phone
+        self.db_manager.cursor.execute('''
+        SELECT * FROM clients WHERE name LIKE ? OR email LIKE ? OR phone LIKE ?
+        ''', (f'%{search_term}%', f'%{search_term}%', f'%{search_term}%'))
+        clients = self.db_manager.cursor.fetchall()
+        
+        if not clients:
+            return f"No clients found matching '{search_term}'"
+        
+        # Format results
+        result = []
+        for client in clients:
+            result.append(
+                f"ID: {client[0]}, Name: {client[1]}, Email: {client[2]}, Phone: {client[3]}, Address: {client[4]}"
+            )
+        
+        return "\n".join(result)
+    
+    def update_client_info(self, client_id, email=None, phone=None, address=None, notes=None):
+        args = {}
+        if email:
+            args['email'] = email
+        if phone:
+            args['phone'] = phone
+        if address:
+            args['address'] = address
+        if notes:
+            args['notes'] = notes
+        
+        self.db_manager.update_client(client_id, **args)
+        return f"Client information updated for Client ID: {client_id}"
+
+class AdvertisingModule(BaseBusinessModule):
+    def process_message(self, message, context=None):
+        ad_keywords = ['ad', 'advertising', 'campaign', 'promotion']
+        if any(k in message.lower() for k in ad_keywords):
+            return "I can help with advertising automation. Would you like to create a new campaign, check ad performance, or optimize existing campaigns?"
+        return None
+    
+    def create_ad_campaign(self, platform, budget, target_keywords=None, demographics=None):
+        # Mock implementation - in real app, this would call ad platform APIs
+        campaign_id = f"camp_{platform}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
+        
+        # Store campaign info in performance table with initial data
+        self.db_manager.add_ads_performance(
+            platform=platform,
+            campaign_id=campaign_id,
+            impressions=0,
+            clicks=0,
+            conversions=0,
+            cost=0,
+            revenue=0
+        )
+        
+        return f"Created new {platform} ad campaign with ID: {campaign_id}. Budget: ${budget} per day."
+    
+    def check_ad_performance(self, campaign_id=None, platform=None, days=7):
+        if campaign_id:
+            data = self.db_manager.get_ads_performance(campaign_id=campaign_id)
+        elif platform:
+            # Get data for the last N days
+            start_date = (datetime.datetime.now() - datetime.timedelta(days=days)).strftime('%Y-%m-%d')
+            end_date = datetime.datetime.now().strftime('%Y-%m-%d')
+            data = self.db_manager.get_ads_performance(platform=platform, date_range=(start_date, end_date))
+        else:
+            # Get overall data for the last N days
+            start_date = (datetime.datetime.now() - datetime.timedelta(days=days)).strftime('%Y-%m-%d')
+            end_date = datetime.datetime.now().strftime('%Y-%m-%d')
+            data = self.db_manager.get_ads_performance(date_range=(start_date, end_date))
+        
+        if not data:
+            return "No performance data available for the specified criteria."
+        
+        # Aggregate and format data
+        total_impressions = sum(item[3] for item in data)
+        total_clicks = sum(item[4] for item in data)
+        total_conversions = sum(item[5] for item in data)
+        total_cost = sum(item[6] for item in data)
+        total_revenue = sum(item[7] for item in data)
+        
+        ctr = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0
+        cpc = total_cost / total_clicks if total_clicks > 0 else 0
+        roas = total_revenue / total_cost if total_cost > 0 else 0
+        
+        return (f"Ad Performance Summary:\n"
+                f"Impressions: {total_impressions:,}\n"
+                f"Clicks: {total_clicks:,}\n"
+                f"Conversions: {total_conversions:,}\n"
+                f"Cost: ${total_cost:.2f}\n"
+                f"Revenue: ${total_revenue:.2f}\n"
+                f"CTR: {ctr:.2f}%\n"
+                f"CPC: ${cpc:.2f}\n"
+                f"ROAS: {roas:.2f}\n")
+    
+    def optimize_ads(self, platform=None):
+        # Mock implementation - in real app, this would analyze data and make recommendations
+        return (f"To optimize your {platform or 'advertising'} campaigns, I recommend:\n"
+                f"1. Adjust bids based on performance metrics\n"
+                f"2. Pause underperforming ad groups\n"
+                f"3. Reallocate budget to high-converting campaigns\n"
+                f"4. Test different ad creatives and copy\n"
+                f"5. Refine targeting based on conversion data")
+
+class InventoryModule(BaseBusinessModule):
+    def process_message(self, message, context=None):
+        inventory_keywords = ['inventory', 'stock', 'product', 'item', 'equipment']
+        if any(k in message.lower() for k in inventory_keywords):
+            return "I can help with inventory management. Would you like to add items, check stock levels, update inventory, or see low stock alerts?"
+        return None
+    
+    def add_inventory_item(self, item_id, name, quantity, price, category, supplier, custom_fields=None):
+        self.db_manager.add_inventory_item(
+            item_id=item_id,
+            name=name,
+            quantity=quantity,
+            price=price,
+            category=category,
+            supplier=supplier,
+            custom_fields=custom_fields
+        )
+        return f"Added inventory item: {name} (ID: {item_id})"
+    
+    def check_inventory(self, category=None, low_stock=False):
+        items = self.db_manager.get_inventory(category=category, low_stock=low_stock)
+        
+        if not items:
+            return "No inventory items found matching your criteria."
+        
+        # Format results
+        result = []
+        for item in items:
+            item_display = f"ID: {item[1]}, Name: {item[2]}, Quantity: {item[3]}, Price: ${item[4]:.2f}, Supplier: {item[6]}"
+            
+            # Add business-specific fields
+            if item[8]:  # custom_fields JSON
+                try:
+                    custom_fields = json.loads(item[8])
+                    custom_display = ", ".join([f"{k}: {v}" for k, v in custom_fields.items()])
+                    if custom_display:
+                        item_display += f", Details: {custom_display}"
+                except json.JSONDecodeError:
+                    pass
+            
+            result.append(item_display)
+        
+        return "\n".join(result)
+    
+    def update_inventory(self, item_id, quantity=None, price=None, custom_fields=None):
+        self.db_manager.update_inventory(
+            item_id=item_id,
+            quantity=quantity,
+            price=price,
+            custom_fields=custom_fields
+        )
+        return f"Updated inventory item: {item_id}"
+    
+    def get_low_stock_alerts(self):
+        items = self.db_manager.get_inventory(low_stock=True)
+        
+        if not items:
+            return "No items are currently low in stock."
+        
+        # Format results
+        result = ["Low stock alerts:"]
+        for item in items:
+            result.append(f"- {item[2]} (ID: {item[1]}): {item[3]} left")
+        
+        return "\n".join(result)
+
+class FollowUpModule(BaseBusinessModule):
+    def process_message(self, message, context=None):
+        followup_keywords = ['follow up', 'follow', 'schedule', 'appointment', 'call', 'contact']
+        if any(k in message.lower() for k in followup_keywords):
+            return "I can help with customer follow-ups. Would you like to schedule a follow-up, check pending follow-ups, or mark one as completed?"
+        return None
+    
+    def schedule_follow_up(self, client_id, scheduled_date, notes=None):
+        follow_up_id = self.db_manager.schedule_follow_up(client_id, scheduled_date, notes)
+        return f"Scheduled follow-up ID: {follow_up_id} for client ID: {client_id} on {scheduled_date}"
+    
+    def get_pending_follow_ups(self):
+        follow_ups = self.db_manager.get_pending_follow_ups()
+        
+        if not follow_ups:
+            return "No pending follow-ups."
+        
+        # Format results
+        result = ["Pending follow-ups:"]
+        for follow_up in follow_ups:
+            result.append(
+                f"ID: {follow_up[0]}, Client: {follow_up[8]}, Date: {follow_up[3]}, Notes: {follow_up[4] or 'None'}"
+            )
+        
+        return "\n".join(result)
+    
+    def complete_follow_up(self, follow_up_id):
+        self.db_manager.complete_follow_up(follow_up_id)
+        return f"Marked follow-up ID: {follow_up_id} as completed."
+
+# HVAC-specific Module
+class HVACModule(BaseBusinessModule):
+    def process_message(self, message, context=None):
+        hvac_keywords = ['hvac', 'air conditioning', 'heating', 'ventilation', 'ac', 'furnace', 'unit']
+        if k in message.lower() for k in hvac_keywords:
+            return "I can help with HVAC-specific needs. Would you like to track equipment, schedule maintenance, or manage service history?"
+        return None
+    
+    def add_hvac_equipment(self, client_id, equipment_details):
+        # Add equipment as a custom inventory item
+        equipment_id = f"hvac_{client_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
+        
+        custom_fields = {
+            'client_id': client_id,
+            'type': equipment_details.get('type', ''),
+            'brand': equipment_details.get('brand', ''),
+            'model': equipment_details.get('model', ''),
+            'serial_number': equipment_details.get('serial_number', ''),
+            'installation_date': equipment_details.get('installation_date', ''),
+            'warranty_expiry': equipment_details.get('warranty_expiry', ''),
+            'last_service': equipment_details.get('last_service', '')
+        }
+        
+        self.db_manager.add_inventory_item(
+            item_id=equipment_id,
+            name=f"{equipment_details.get('brand', '')} {equipment_details.get('type', '')}",
+            quantity=1,
+            price=0,  # Equipement value could be added here
+            category='HVAC Equipment',
+            supplier=equipment_details.get('installer', ''),
+            custom_fields=custom_fields
+        )
+        
+        return f"Added HVAC equipment: {equipment_details.get('brand', '')} {equipment_details.get('type', '')} for client {client_id}"
+    
+    def schedule_maintenance(self, client_id, equipment_id, scheduled_date, notes=None):
+        follow_up_id = self.db_manager.schedule_follow_up(client_id, scheduled_date, notes)
+        return f"Scheduled maintenance ID: {follow_up_id} for equipment {equipment_id} on {scheduled_date}"
+    
+    def get_client_equipment(self, client_id):
+        # Get all inventory items with custom_fields containing this client_id
+        items = self.db_manager.get_inventory(category='HVAC Equipment')
+        
+        client_items = []
+        for item in items:
+            if item[8]:  # custom_fields JSON
+                try:
+                    custom_fields = json.loads(item[8])
+                    if custom_fields.get('client_id') == str(client_id):
+                        client_items.append(item)
+                except json.JSONDecodeError:
+                    pass
+        
+        if not client_items:
+            return f"No HVAC equipment found for client ID: {client_id}"
+        
+        # Format results
+        result = [f"HVAC equipment for client {client_id}:"]
+        for item in client_items:
+            custom_fields = json.loads(item[8]) if item[8] else {}
+            result.append(
+                f"ID: {item[1]}, Type: {custom_fields.get('type', 'N/A')}, Brand: {custom_fields.get('brand', 'N/A')}, "
+                f"Model: {custom_fields.get('model', 'N/A')}, Installed: {custom_fields.get('installation_date', 'N/A')}"
+            )
+        
+        return "\n".join(result)
+
+# Main Chatbot Class
+class BusinessChatbot:
+    def __init__(self, config_file='config.json'):
+        self.config = BusinessConfig(config_file)
+        self.db_manager = DatabaseManager()
+        
+        # Initialize modules based on business type
+        self.modules = {
+            'seo': SEOModule(self.config, self.db_manager),
+            'leads': LeadGenerationModule(self.config, self.db_manager),
+            'clients': ClientDataModule(self.config, self.db_manager),
+            'ads': AdvertisingModule(self.config, self.db_manager),
+            'inventory': InventoryModule(self.config, self.db_manager),
+            'followups': FollowUpModule(self.config, self.db_manager)
+        }
+        
+        # Add business-specific modules
+        business_type = self.config.config.get('business_type', 'general')
+        if business_type == 'hvac':
+            self.modules['hvac'] = HVACModule(self.config, self.db_manager)
+        
+        logger.info(f"Initialized {business_type} business chatbot with modules: {', '.join(self.modules.keys())}")
+    
+    def process_message(self, message, user_id=None):
+        # Check for module-specific responses
+        for module_name, module in self.modules.items():
+            response = module.process_message(message)
+            if response:
+                return response
+        
+        # Default responses for general queries
+        if 'hello' in message.lower() or 'hi' in message.lower():
+            return f"Hello! I'm your business assistant for {self.config.config.get('business_name')}. How can I help you today?"
+        
+        if 'help' in message.lower():
+            return ("I can help you with:\n"
+                    "- SEO analytics and keyword tracking\n"
+                    "- Lead generation from Facebook and other sources\n"
+                    "- Client data collection and management\n"
+                    "- Advertising campaign management\n"
+                    "- Inventory tracking and stock alerts\n"
+                    "- Customer follow-up scheduling\n"
+                    f"- {'HVAC equipment tracking and maintenance' if self.config.config.get('business_type') == 'hvac' else 'Business-specific operations'}")
+        
+        else:
+            return "I'm not sure how to help with that. Try asking about SEO, leads, clients, advertising, inventory, or type 'help' for more options."
+    
+    def process_command(self, command, params=None):
+        # Example command structure: [module].[action]([params])
+        if not params:
+            params = {}
+        
+        module_name, action = command.split('.', 1)
+        if module_name in self.modules:
+            module = self.modules[module_name]
+            if hasattr(module, action):
+                try:
+                    method = getattr(module, action)
+                    if isinstance(params, dict):
+                        return method(**params)
+                    else:
+                        return method(params)
+                except Exception as e:
+                    logger.error(f"Error executing command {command}: {str(e)}")
+                    return f"Error executing command: {str(e)}"
+        return f"Unknown command: {command}"
+    
+    def customize_for_business(self, business_name, business_type, custom_fields=None):
+        # Update configuration for white-label customization
+        self.config.update_config('business_name', business_name)
+        self.config.update_config('business_type', business_type)
+        
+        if custom_fields and isinstance(custom_fields, dict):
+            for key, value in custom_fields.items():
+                self.config.update_config(key, value)
+        
+        # Add business-specific modules
+        if business_type == 'hvac' and 'hvac' not in self.modules:
+            self.modules['hvac'] = HVACModule(self.config, self.db_manager)
+        
+        return f"Chatbot customized for {business_name} ({business_type})"
+    
+    def close(self):
+        self.db_manager.close()
+
+# Example Usage
+if __name__ == "__main__":
+    # Initialize the chatbot
+    chatbot = BusinessChatbot()
+    
+    # Customize for a specific business (HVAC company)
+    chatbot.customize_for_business(
+        business_name="Cool Air HVAC Services",
+        business_type="hvac",
+        custom_fields={
+            "contact_info.phone": "(555) 123-4567",
+            "contact_info.email": "service@coolairhvac.com",
+            "social_media.facebook_page_id": "coolairhvac",
+            "seo_keywords": ["hvac repair", "air conditioning", "furnace maintenance", "cooling services"]
+        }
+    )
+    
+    # Example interactions
+    print("Business Chatbot Initialized")
+    print("Type 'quit' to exit\n")
+    
+    while True:
+        user_input = input("You: ")
+        if user_input.lower() == 'quit':
+            break
+        
+        # Check if it's a command or a message
+        if user_input.startswith('cmd:'):
+            command = user_input[4:].strip()
+            parts = command.split('(', 1)
+            if len(parts) == 2:
+                command_name = parts[0]
+                params_str = parts[1].rstrip(')')
+                # Parse params (simplified)
+                params = {}
+                if params_str:
+                    param_pairs = params_str.split(',')
+                    for pair in param_pairs:
+                        key_value = pair.split('=')
+                        if len(key_value) == 2:
+                            params[key_value[0].strip()] = key_value[1].strip().strip('"\'')
+                response = chatbot.process_command(command_name, params)
+            else:
+                response = chatbot.process_command(parts[0])
+        else:
+            response = chatbot.process_message(user_input)
+        
+        print(f"Bot: {response}")
+    
+    chatbot.close()
