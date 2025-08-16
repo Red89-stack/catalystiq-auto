@@ -1,6 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { SecurityMiddleware } from '../../lib/security';
-import { BusinessChatbot } from '../../lib/chatbot';
+import { SecurityMiddleware } from '@/lib/security';
+import { BusinessChatbot } from '@/lib/chatbot';
+
+function getClientIP(req: NextApiRequest): string {
+  const xff = req.headers['x-forwarded-for'];
+  if (typeof xff === 'string') return xff.split(',')[0].trim();
+  if (Array.isArray(xff)) return xff[0];
+  return req.socket.remoteAddress || 'unknown';
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const security = new SecurityMiddleware();
@@ -8,8 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Security validation
   const validation = security.validateRequest(req);
   if (!validation.valid) {
-    const clientIP =
-      (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    const clientIP = getClientIP(req);
     security.logSecurityEvent('REQUEST_BLOCKED', { reason: validation.error }, clientIP);
     
     return res.status(403).json({
@@ -49,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         messageLength: message.length,
         hasContext: !!context,
       },
-      (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown'
+      getClientIP(req)
     );
     
     return res.status(200).json({
@@ -61,11 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     console.error('Chat API error:', error);
     
-    security.logSecurityEvent(
-      'CHAT_ERROR',
-      { error: (error as Error).message },
-      (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown'
-    );
+    security.logSecurityEvent('CHAT_ERROR', { error: (error as Error).message }, getClientIP(req));
     
     return res.status(500).json({
       success: false,
