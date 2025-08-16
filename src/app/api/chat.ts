@@ -1,10 +1,15 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { SecurityMiddleware } from '../../lib/security';
+import { BusinessChatbot } from '../../lib/chatbot';
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const security = new SecurityMiddleware();
   
   // Security validation
   const validation = security.validateRequest(req);
   if (!validation.valid) {
-    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    const clientIP =
+      (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
     security.logSecurityEvent('REQUEST_BLOCKED', { reason: validation.error }, clientIP);
     
     return res.status(403).json({
@@ -38,10 +43,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const response = chatbot.processMessage(message, context);
     
     // Log successful interaction
-    security.logSecurityEvent('CHAT_MESSAGE', { 
-      messageLength: message.length,
-      hasContext: !!context 
-    }, req.ip || 'unknown');
+    security.logSecurityEvent(
+      'CHAT_MESSAGE',
+      {
+        messageLength: message.length,
+        hasContext: !!context,
+      },
+      (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown'
+    );
     
     return res.status(200).json({
       success: true,
@@ -52,9 +61,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     console.error('Chat API error:', error);
     
-    security.logSecurityEvent('CHAT_ERROR', { 
-      error: error.message 
-    }, req.ip || 'unknown');
+    security.logSecurityEvent(
+      'CHAT_ERROR',
+      { error: (error as Error).message },
+      (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown'
+    );
     
     return res.status(500).json({
       success: false,

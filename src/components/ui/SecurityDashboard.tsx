@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { SecurityManager } from '../lib/security';
+import React, { useState, useEffect, useCallback } from 'react';
+import { SecurityManager } from '@/lib/security';
 
 interface SecurityStats {
   blockedIPs: string[];
@@ -13,11 +13,7 @@ export const SecurityDashboard: React.FC = () => {
   const [securityStats, setSecurityStats] = useState<SecurityStats | null>(null);
   const [security] = useState(() => new SecurityManager());
 
-  useEffect(() => {
-    loadSecurityStats();
-  }, []);
-
-  const loadSecurityStats = () => {
+  const loadSecurityStats = useCallback(() => {
     const audit = security.getSecurityAudit();
     setSecurityStats({
       blockedIPs: audit.blockedIPs,
@@ -26,7 +22,11 @@ export const SecurityDashboard: React.FC = () => {
       lastSecurityCheck: audit.lastSecurityCheck,
       recommendations: audit.recommendations
     });
-  };
+  }, [security]);
+
+  useEffect(() => {
+    loadSecurityStats();
+  }, [loadSecurityStats]);
 
   const getStorageUsagePercentage = (): number => {
     if (typeof window === 'undefined') return 0;
